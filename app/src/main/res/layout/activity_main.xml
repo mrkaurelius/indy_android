@@ -6,4 +6,70 @@
     android:layout_height="match_parent"
     tools:context="com.example.sampleindywallet.MainActivity">
 
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="358dp"
+        android:layout_height="212dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="500dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="100dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Button
+            android:id="@+id/DIDButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DID'ler" />
+
+        <Button
+            android:id="@+id/CredentialButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Kimlikler" />
+
+        <Button
+            android:id="@+id/WebAuthButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Web Auth" />
+
+        <Button
+            android:id="@+id/SetupWalletButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Wallet'i Kur" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/DevLayout"
+        android:layout_width="345dp"
+        android:layout_height="174dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="152dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="134dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Button
+            android:id="@+id/DevIndy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dev Indy" />
+
+        <Button
+            android:id="@+id/DevVolley"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dev Volley" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

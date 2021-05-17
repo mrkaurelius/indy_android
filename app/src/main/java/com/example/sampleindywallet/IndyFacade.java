@@ -1,10 +1,16 @@
 package com.example.sampleindywallet;
 
+import android.os.Build;
 import android.system.ErrnoException;
 import android.system.Os;
+import android.util.Base64;
+import android.util.Log;
+
+import androidx.annotation.RequiresApi;
 
 import org.apache.commons.io.FileUtils;
 import org.hyperledger.indy.sdk.IndyException;
+import org.hyperledger.indy.sdk.crypto.Crypto;
 import org.hyperledger.indy.sdk.did.Did;
 import org.hyperledger.indy.sdk.did.DidJSONParameters.CreateAndStoreMyDidJSONParameter;
 import org.hyperledger.indy.sdk.did.DidResults.CreateAndStoreMyDidResult;
@@ -12,6 +18,7 @@ import org.hyperledger.indy.sdk.pool.Pool;
 import org.hyperledger.indy.sdk.pool.PoolJSONParameters;
 import org.hyperledger.indy.sdk.wallet.Wallet;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -19,13 +26,15 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+
+import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 
 public class IndyFacade {
 
     public static class IndyFacadeException extends Exception {
-
 
         public IndyFacadeException() {
             super();
@@ -52,9 +61,11 @@ public class IndyFacade {
         ANDROID("android"),
         WINDOWS("windows");
         private String name;
+
         Platform(String name) {
             this.name = name;
         }
+
         public String getName() {
             return name;
         }
@@ -81,6 +92,7 @@ public class IndyFacade {
     private IndyFacade(String environmentPath) {
         this.environmentPath = environmentPath;
         indyClientPath = environmentPath + "/" + DEFAULT_INDY_CLIENT_DIRECTORY;
+
     }
 
 
@@ -95,7 +107,75 @@ public class IndyFacade {
             singleton.setProtocolVersion(protocolVersion);
         }
         return singleton;
+    }
 
+    public static IndyFacade getInstance(){
+        if (singleton != null){
+            return singleton;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Didleri arraylist olarak geri doner
+     * @throws IndyFacadeException
+     */
+    public ArrayList<String> getDids() throws  IndyFacadeException {
+        // parse json and return as String array list
+        ArrayList<String> dids = new ArrayList<String>();
+        if (wallet == null) {
+            Log.e("IndyFacade", "getDids: wallet acik degil");
+            throw new IndyFacadeException();
+        }
+        try {
+            JSONArray myDids = new JSONArray(Did.getListMyDidsWithMeta(wallet).get());
+            for (int i = 0; i < myDids.length(); i++) {
+                dids.add(myDids.getJSONObject(i).getString("did"));
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return dids;
+    }
+
+
+    /**
+     * @param message  guvenli mesaj
+     * @param ourDid   walletteki local did
+     * @param theirDid karsi tarafin didi
+     * @return sifrelenmis mesajin base64 hali
+     * @throws IndyFacadeException
+     */
+    public String createSecureMessageB64(String message, String ourDid, String theirDid) throws IndyFacadeException {
+        Log.d("IndyFacade", String.format("createSecureMessageB64, message: %s, ourDid: %s, theirDid: %s ",
+                message, ourDid, theirDid));
+        String theirVerkey = readVerKeyForDidFromLedger(theirDid);
+        String ourVerkey = null;
+        byte[] encrypted;
+        byte[] binaryMessage;
+
+        try {
+            ourVerkey = Did.keyForDid(pool, wallet, ourDid).get();
+            binaryMessage = message.getBytes();
+            // encrypted = Crypto.authCrypt(wallet, ourVerkey, theirVerkey, binaryMessage).get();
+            // todo authcrypt depracated olacak pack message kullan
+             encrypted = Crypto.authCrypt(wallet, ourVerkey, theirVerkey, binaryMessage).get();
+            //Crypto.packMessage()
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        if (wallet == null) {
+            // wallet acik degil
+            throw new IndyFacadeException();
+        }
+
+        Log.d("IndyFacade", String.format("createSecureMessageB64: theirVerkey: %s", theirVerkey));
+        return Base64.encodeToString(encrypted, Base64.DEFAULT);
+        // Log.d("IndyFacade", String.format("encrypted: %s", base64String));
     }
 
 
@@ -132,7 +212,6 @@ public class IndyFacade {
     }
 
 
-
     public void writeGenesisTransactions(String[] genesisContent, String genesisFileName) throws IndyFacadeException {
         try {
             File genesisFile = new File(indyClientPath + "/" + genesisFileName);
@@ -151,29 +230,17 @@ public class IndyFacade {
 
     public void deleteGenesisTransactions(String genesisFileName) throws IndyFacadeException {
         File genesisFile = new File(indyClientPath + "/" + genesisFileName);
-        if(genesisFile.exists()) {
+        if (genesisFile.exists()) {
             if (!genesisFile.delete()) {
                 throw new IndyFacadeException("could not delete Genesis-File");
             }
         }
     }
 
-
-
-
-
-
-
-
-
     public boolean isPoolCreated(String poolName) {
         File file = new File(indyClientPath + "/" + DEFAULT_POOL_DIRECTORY + "/" + poolName);
         return file.exists();
     }
-
-
-
-
 
     private String[] getDefaultGenesisTxn(String poolIPAddress) {
         String[] s = new String[]{String.format(
@@ -198,7 +265,6 @@ public class IndyFacade {
         } catch (InterruptedException | ExecutionException | IndyException e) {
             throw new IndyFacadeException("could not protocol version", e);
         }
-
     }
 
 
@@ -215,9 +281,6 @@ public class IndyFacade {
     }
 
 
-
-
-
     public void createPool(String poolName, String genesisTransactionsFileName) throws IndyFacadeException {
         try {
             PoolJSONParameters.CreatePoolLedgerConfigJSONParameter createPoolLedgerConfigJSONParameter = new PoolJSONParameters.CreatePoolLedgerConfigJSONParameter(
@@ -231,7 +294,7 @@ public class IndyFacade {
 
     public void deletePool(String poolName) throws IndyFacadeException {
         File pool = new File(indyClientPath + "/" + DEFAULT_POOL_DIRECTORY + "/" + poolName);
-        if(pool.exists()) {
+        if (pool.exists()) {
             for (File f : pool.listFiles()) {
                 if (!f.delete()) {
                     throw new IndyFacadeException("could not delete Pool");
@@ -261,13 +324,6 @@ public class IndyFacade {
     }
 
 
-
-
-
-
-
-
-
     public void openDefaultPool() throws IndyFacadeException {
         openPool(IndyFacade.DEFAULT_POOL_NAME, null);
     }
@@ -281,8 +337,6 @@ public class IndyFacade {
             throw new IndyFacadeException("could not close pool", e);
         }
     }
-
-
 
 
     public void openWallet(String walletName, String walletPassword) throws IndyFacadeException {
@@ -300,7 +354,6 @@ public class IndyFacade {
     }
 
 
-
     public void closeWallet() throws IndyFacadeException {
 
         try {
@@ -313,8 +366,6 @@ public class IndyFacade {
     }
 
 
-
-
     public void deleteWallet(String walletName) throws IndyFacadeException {
         try {
             File f = new File(indyClientPath + "/" + DEFAULT_WALLET_DIRECTORY + "/" + walletName);
@@ -325,8 +376,6 @@ public class IndyFacade {
             throw new IndyFacadeException("could not delete wallet", e);
         }
     }
-
-
 
 
     public CreateAndStoreMyDidResult createDID(String seed) throws IndyFacadeException {
@@ -349,22 +398,6 @@ public class IndyFacade {
             throw new IndyFacadeException("could not read verkey for did from ledger", e);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
