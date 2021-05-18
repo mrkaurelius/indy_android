@@ -9,6 +9,16 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -17,6 +27,7 @@ import org.hyperledger.indy.sdk.did.DidResults;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 public class DIDAuthActivity extends AppCompatActivity {
@@ -57,7 +68,7 @@ public class DIDAuthActivity extends AppCompatActivity {
         Log.d(TAG, "onResume: starting");
 
         // Qr tarama adimini atla (Dummy data)
-        DIDAuthActivity.scannedData = "{\"sdid\":\"Th7MpTaRZVRYnPiabds81Y\",\"nonce\":\"488132fa204de18afa1a476d08acb7af\"}";
+        DIDAuthActivity.scannedData = "{\"sdid\": \"Th7MpTaRZVRYnPiabds81Y\", \"nonce\": \"adb6b5f6f5c99418550b83c5277c6938\"}";
 
         if (DIDAuthActivity.scannedData != null) {
             Log.d(TAG, "onResume: Qr scanned resuming!");
@@ -91,16 +102,49 @@ public class DIDAuthActivity extends AppCompatActivity {
             responseJson.put("response_msg", msg);
             Log.d(TAG, "onResume: responseJson: " + responseJson.toString());
 
-            //        Python Algo
-            //        response = {}
-            //        response['sender_did'] = my_did
-            //        nonce = challenge['nonce']
-            //        msg = await crypto.auth_crypt(wallet_handle, my_did_verkey, server_verkey, nonce.encode('utf-8'))
-            //        msg_b64 = base64.b64encode(msg).decode('ascii')
-            //        response['response_msg'] = msg_b64
-
-
             // TODO 3. send challenge
+
+            RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+            final String responseJsonString = responseJson.toString();
+            String url = "http://192.168.1.101:3000/auth/response";
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    Log.i(TAG, response);
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e(TAG, error.toString());
+                }
+            }) {
+                @Override
+                public String getBodyContentType() {
+                    return "application/json; charset=utf-8";
+                }
+
+                @Override
+                public byte[] getBody() throws AuthFailureError {
+                    try {
+                        return responseJsonString == null ? null : responseJsonString.getBytes("utf-8");
+                    } catch (UnsupportedEncodingException uee) {
+                        VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", responseJsonString, "utf-8");
+                        return null;
+                    }
+                }
+
+                @Override
+                protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                    String responseString = "";
+                    if (response != null) {
+                        responseString = String.valueOf(response.statusCode);
+                        Log.d(TAG, "parseNetworkResponse: " + new String(response.data));
+                    }
+                    return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+                }
+            };
+            requestQueue.add(stringRequest);
 
 
             // TODO 4. parse response
