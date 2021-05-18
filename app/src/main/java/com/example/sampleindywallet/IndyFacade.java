@@ -73,7 +73,7 @@ public class IndyFacade {
 
     private static IndyFacade singleton;
 
-    public static final String DEFAULT_POOL_NAME = "myIndyPool";
+    public static final String DEFAULT_POOL_NAME = "sanbox";
     public static final String DEFAULT_POOL_DIRECTORY = "pool";
     public static final String DEFAULT_WALLET_DIRECTORY = "wallet";
     public static final String DEFAULT_GENESIS_FILE = "genesis.txn";
@@ -174,7 +174,7 @@ public class IndyFacade {
         }
 
         Log.d("IndyFacade", String.format("createSecureMessageB64: theirVerkey: %s", theirVerkey));
-        return Base64.encodeToString(encrypted, Base64.DEFAULT);
+        return Base64.encodeToString(encrypted, Base64.NO_WRAP);
         // Log.d("IndyFacade", String.format("encrypted: %s", base64String));
     }
 

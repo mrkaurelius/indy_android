@@ -8,15 +8,23 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.hyperledger.indy.sdk.did.DidResults;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
 import java.util.ArrayList;
 
 // TODO indy loglarini ac
@@ -111,96 +119,98 @@ public class MainActivity extends AppCompatActivity {
                 } catch (IndyFacade.IndyFacadeException e) {
                     Log.e(TAG, "onClick: There went something wrong with indy", e);
                 }
-
-
             }
         });
 
 
-//        try {
-
-
-//            /*
-//            5. now we populate the opened wallet with the steward did
-//             */
-//            String ourDidSeed = "10c73cc3fb2a74cde93bbbd853c93ee1";
-//            DidResults.CreateAndStoreMyDidResult ourDidSeedResult = indyFacade.createDID(ourDidSeed);
-//            String ourDID = ourDidSeedResult.getDid();
-//            Log.d(TAG, "onCreate: ourDid is " + ourDID);
-//
-//
-//            String seed = "000000000000000000000000Steward1";
-//            DidResults.CreateAndStoreMyDidResult stewardResult = indyFacade.createDID(seed);
-//            String stewardDID = stewardResult.getDid();
-//            Log.d(TAG, "onCreate: Steward-DID is " + stewardDID);
-//
-//
-//
-//            /*
-//            6. now we query the steward did from the ledger. we have to open the created pool first
-//             */
-//            String verKey = indyFacade.readVerKeyForDidFromLedger(stewardDID);
-//            Log.d(TAG, "onCreate: read verKey from ledger successfully " + verKey);
-//
-//
-//            // get dids
-//            ArrayList<String> dids = indyFacade.getDids();
-//            System.out.println(dids.toString());
-//
-//            // Secure message
-//            String message = "merhaba yalan dunya";
-//            String secureMessage = indyFacade.createSecureMessageB64(message, ourDID, stewardDID);
-//            Log.d(TAG, String.format("onCreate: secureMessage: %s", secureMessage));
-//
-//            indyFacade.closePool();
-//            Log.d(TAG, "onCreate: pool closed successfully");
-//
-//            /*
-//            7. close wallet
-//             */
-//            indyFacade.closeWallet();
-//            Log.d(TAG, "onCreate: wallet closed successfully");
-//
-//        } catch (IndyFacade.IndyFacadeException e) {
-//            Log.e(TAG, "onCreate: There went something wrong with indy", e);
-//        }
-
-
         Button DevVolleyButton = (Button) findViewById(R.id.DevVolley);
         DevVolleyButton.setOnClickListener(new View.OnClickListener() {
-            // post icin bu calisabilir
-            // TODO https://stackoverflow.com/questions/37468403/post-request-with-json-body-in-volley-android
 
+            // TODO https://stackoverflow.com/questions/37468403/post-request-with-json-body-in-volley-android
             @Override
             public void onClick(View view) {
-                // Volley basit istek cogu sey icin olur gibi
 
                 Log.d(TAG, "onClick: Dev Volley");
-                // volley get google
-                RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-                String url = "http://192.168.1.101:9000/genesis";
+                try {
+                    RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+                    JSONObject jsonBody = new JSONObject();
+                    jsonBody.put("username", "Shozib@gmail.com");
+                    jsonBody.put("password", "Shozib123");
+                    final String mRequestBody = jsonBody.toString();
+                    String url = "http://192.168.1.101:3001/postbox";
 
-                // Request a string response from the provided URL.
-                StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                        new Response.Listener<String>() {
-                            @Override
-                            public void onResponse(String response) {
-                                // Display the first 500 characters of the response string.
-                                Log.d(TAG, "Response is: " + response.substring(0, 500));
+                    StringRequest stringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            Log.i(TAG, response);
+                        }
+                    }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            Log.e(TAG, error.toString());
+                        }
+                    }) {
+                        @Override
+                        public String getBodyContentType() {
+                            return "application/json; charset=utf-8";
+                        }
+
+                        @Override
+                        public byte[] getBody() throws AuthFailureError {
+                            try {
+                                return mRequestBody == null ? null : mRequestBody.getBytes("utf-8");
+                            } catch (UnsupportedEncodingException uee) {
+                                VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", mRequestBody, "utf-8");
+                                return null;
                             }
-                        }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Log.d(TAG, "onErrorResponse: That didn't work!");
-                        Log.e(TAG, "onErrorResponse: " + error.toString());
-                    }
-                });
+                        }
 
-                // Add the request to the RequestQueue.
-                queue.add(stringRequest);
+                        @Override
+                        protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                            String responseString = "";
+                            if (response != null) {
+                                responseString = String.valueOf(response.statusCode);
+
+
+                                Log.d(TAG, "parseNetworkResponse: " + new String(response.data));
+                            }
+                            return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+                        }
+                    };
+
+                    requestQueue.add(stringRequest);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
 
             }
         });
 
     }
 }
+
+/*
+// volley get google
+RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+String url = "http://192.168.1.101:9000/genesis";
+
+// Request a string response from the provided URL.
+StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+        new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                // Display the first 500 characters of the response string.
+                Log.d(TAG, "Response is: " + response.substring(0, 500));
+            }
+        }, new Response.ErrorListener() {
+    @Override
+    public void onErrorResponse(VolleyError error) {
+        Log.d(TAG, "onErrorResponse: That didn't work!");
+        Log.e(TAG, "onErrorResponse: " + error.toString());
+    }
+});
+
+// Add the request to the RequestQueue.
+queue.add(stringRequest);
+
+ */
