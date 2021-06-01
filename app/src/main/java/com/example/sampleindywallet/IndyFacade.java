@@ -1,12 +1,9 @@
 package com.example.sampleindywallet;
 
-import android.os.Build;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Base64;
 import android.util.Log;
-
-import androidx.annotation.RequiresApi;
 
 import org.apache.commons.io.FileUtils;
 import org.hyperledger.indy.sdk.IndyException;
@@ -25,10 +22,9 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-
-
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 
@@ -40,16 +36,13 @@ public class IndyFacade {
             super();
         }
 
-
         public IndyFacadeException(String msg) {
             super(msg);
         }
 
-
         public IndyFacadeException(Throwable cause) {
             super(cause);
         }
-
 
         public IndyFacadeException(String msg, Throwable cause) {
             super(msg, cause);
@@ -85,16 +78,13 @@ public class IndyFacade {
     private Wallet wallet;
     private String walletName;
 
-
     private Pool pool;
-
 
     private IndyFacade(String environmentPath) {
         this.environmentPath = environmentPath;
         indyClientPath = environmentPath + "/" + DEFAULT_INDY_CLIENT_DIRECTORY;
 
     }
-
 
     public static IndyFacade createInstance(String environmentPath, Platform platform, int protocolVersion) throws IndyFacadeException {
         if (singleton == null) {
@@ -109,8 +99,8 @@ public class IndyFacade {
         return singleton;
     }
 
-    public static IndyFacade getInstance(){
-        if (singleton != null){
+    public static IndyFacade getInstance() {
+        if (singleton != null) {
             return singleton;
         } else {
             return null;
@@ -119,9 +109,10 @@ public class IndyFacade {
 
     /**
      * Didleri arraylist olarak geri doner
+     *
      * @throws IndyFacadeException
      */
-    public ArrayList<String> getDids() throws  IndyFacadeException {
+    public ArrayList<String> getDids() throws IndyFacadeException {
         // parse json and return as String array list
         ArrayList<String> dids = new ArrayList<String>();
         if (wallet == null) {
@@ -133,7 +124,7 @@ public class IndyFacade {
             for (int i = 0; i < myDids.length(); i++) {
                 dids.add(myDids.getJSONObject(i).getString("did"));
             }
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -161,7 +152,7 @@ public class IndyFacade {
             binaryMessage = message.getBytes();
             // encrypted = Crypto.authCrypt(wallet, ourVerkey, theirVerkey, binaryMessage).get();
             // todo authcrypt depracated olacak pack message kullan
-             encrypted = Crypto.authCrypt(wallet, ourVerkey, theirVerkey, binaryMessage).get();
+            encrypted = Crypto.authCrypt(wallet, ourVerkey, theirVerkey, binaryMessage).get();
             //Crypto.packMessage()
         } catch (Exception e) {
             e.printStackTrace();
@@ -176,6 +167,22 @@ public class IndyFacade {
         Log.d("IndyFacade", String.format("createSecureMessageB64: theirVerkey: %s", theirVerkey));
         return Base64.encodeToString(encrypted, Base64.NO_WRAP);
         // Log.d("IndyFacade", String.format("encrypted: %s", base64String));
+    }
+
+    public String unPackMessage(String msg) {
+        try {
+            byte[] unpackedBytes = Crypto.unpackMessage(wallet, msg.getBytes("utf-8")).get();
+            return new String(unpackedBytes, StandardCharsets.UTF_8);
+        } catch (IndyException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 

@@ -52,7 +52,7 @@ dependencies {
     implementation 'com.journeyapps:zxing-android-embedded:4.2.0'
     implementation 'androidx.appcompat:appcompat:1.0.2'
     implementation 'com.android.volley:volley:1.2.0'
-
+    compile 'com.squareup.okhttp:okhttp:2.5.0'
     /*
     staff for indy
      */
